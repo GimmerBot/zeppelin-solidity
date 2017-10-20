@@ -78,7 +78,11 @@ contract LimitedTokenCrowdSale {
   * @return An uint256 representing the current token price.
   */
   function getCurrentTokenPrice() public constant returns (uint256) {
-    return initialTokenRate;
+    revert(); // not implemented exception
+  }
+
+  function getWithdrawTokenPrice() public constant returns (uint256) {
+    revert();
   }
 
   // Saves how much the user bought in tokens for later withdrawal
@@ -91,7 +95,7 @@ contract LimitedTokenCrowdSale {
 
     // give a chance to an inheriting contract to have
     // its own options for token pricing
-    uint256 price = getCurrentTokenPrice();
+    uint256 price = getWithdrawTokenPrice();
 
     // calculate token amount to be given to user
     // (Solidity always truncates on division)

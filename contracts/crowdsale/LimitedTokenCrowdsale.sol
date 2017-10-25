@@ -16,8 +16,15 @@ contract LimitedTokenCrowdSale {
     // the token being sold
     StandardToken public token;
 
+    // Supporter
+    struct Supporter {
+        uint256 balance;
+        uint256 bought;
+        bool hasKYC;
+    }
+
     // address where tokens balances are stored (for user withdrawal)
-    mapping(address => uint256) public tokenBalance;
+    mapping(address => Supporter) public supportersMap;
 
     // address where funds are collected
     address public wallet;
@@ -40,6 +47,9 @@ contract LimitedTokenCrowdSale {
     // the start date of the campaign
     uint256 public saleStartDate;
 
+    // the limit of GMR tokens that can be sold to someone without KYC approval
+    uint256 public saleLimitWithoutKYC;
+
     /**
     * event for token purchase logging
     * @param purchaser who paid for the tokens
@@ -51,22 +61,24 @@ contract LimitedTokenCrowdSale {
 
   function LimitedTokenCrowdSale(uint256 _rate, uint256 _saleStartDate, 
                                   address _tokenAddress, uint256 _minTokenTransaction, 
-                                  address _wallet) {
+                                  uint256 _saleLimitWithoutKYC, address _wallet) {
       require(_rate > 0);
       require(_saleStartDate != 0);
-      require(_tokenAddress != 0x0);
+      require(_tokenAddress != 0);
       require(_minTokenTransaction >= 0);
-      require(_wallet != 0x0);
+      require(_saleLimitWithoutKYC != 0);
+      require(_wallet != 0);
 
       initialTokenRate = _rate;
       saleStartDate = _saleStartDate;
       token = StandardToken(_tokenAddress);
-      wallet = _wallet;
       minTokenTransaction = _minTokenTransaction;
+      saleLimitWithoutKYC = _saleLimitWithoutKYC;
+      wallet = _wallet;
   }
 
   // Receive ETH
-  function () payable {
+  function () public payable {
     // block the transaction if the sale hasn't started yet
     require(now > saleStartDate);
     buyTokenWithdraw();
@@ -77,16 +89,11 @@ contract LimitedTokenCrowdSale {
   * This method is constant and should never change the state of a contract
   * @return An uint256 representing the current token price.
   */
-  function getCurrentTokenPrice() public constant returns (uint256) {
-    revert(); // not implemented exception
-  }
-
-  function getWithdrawTokenPrice() public constant returns (uint256) {
-    revert();
-  }
+  function getDirectTokenPrice() public constant returns (uint256);
+  function getWithdrawTokenPrice() public constant returns (uint256);
 
   // Saves how much the user bought in tokens for later withdrawal
-  function buyTokenWithdraw() payable {
+  function buyTokenWithdraw() public payable {
     uint256 weiAmount = msg.value;
     address sender = msg.sender;
 
@@ -100,14 +107,20 @@ contract LimitedTokenCrowdSale {
     // calculate token amount to be given to user
     // (Solidity always truncates on division)
     uint256 tokens = weiAmount / price;
-
+    
     // must have more tokens than min transaction..
     require(tokens > minTokenTransaction);
     // ..and the contract must have tokens to sell
     require(token.balanceOf(this) > tokens);
 
     // add to the balance of the user, to be paid later
-    tokenBalance[sender] = tokenBalance[sender].add(tokens);
+    Supporter storage sup = supportersMap[sender];
+    uint256 totalBought = sup.bought.add(tokens);
+    if (!sup.hasKYC && totalBought > saleLimitWithoutKYC) {
+      revert();
+    }
+    sup.balance = sup.balance.add(tokens);
+    sup.bought = totalBought;
 
     // update how much Wei we have raised
     weiRaised = weiAmount.add(weiRaised);
@@ -122,8 +135,12 @@ contract LimitedTokenCrowdSale {
     TokenPurchase(sender, sender, weiAmount, tokens);
   }
 
+  function changeUserKYC(address user, bool value) public {
+    supportersMap[user].hasKYC = value;
+  }
+
   // Buys tokens and sends them directly to the end user
-  function buyTokenDirect() payable {
+  function buyTokenDirect() public payable {
     uint256 weiAmount = msg.value;
     address sender = msg.sender;
 
@@ -132,7 +149,7 @@ contract LimitedTokenCrowdSale {
 
     // give a chance to an inheriting contract to have
     // its own options for token pricing
-    uint256 price = getCurrentTokenPrice();
+    uint256 price = getDirectTokenPrice();
 
     // calculate token amount to be given to user
     // (Solidity always truncates on division)
@@ -144,7 +161,16 @@ contract LimitedTokenCrowdSale {
     require(token.balanceOf(this) > tokens);
 
     // add to the balance of the user, to be paid later
+    Supporter storage sup = supportersMap[sender];
+    uint256 totalBought = sup.bought.add(tokens);
+    if (!sup.hasKYC && totalBought > saleLimitWithoutKYC) {
+      revert();
+    }   
+
+    // add to the balance of the user, to be paid later
     if (token.transfer(sender, tokens)) {
+      sup.bought = totalBought;
+
       // update how much Wei we have raised
       weiRaised = weiAmount.add(weiRaised);
       // update the total amount of tokens we have sold
@@ -162,16 +188,17 @@ contract LimitedTokenCrowdSale {
   // Withdraws the tokens that the sender owns
   function withdrawTokens() public {
     address to = msg.sender;
-    uint256 balance = tokenBalance[to];
+    Supporter storage sup = supportersMap[to];
+    uint256 balance = sup.balance;
     require(balance > 0);
 
-    tokenBalance[to] = 0;
+    sup.balance = 0;
     if (token.transfer(to, balance)) {
       // only remove from the amount to withdraw if transfer returned true
       tokensToWithdraw = tokensToWithdraw.sub(balance);
     } else {
       // transfer failed, balance is stuck
-      tokenBalance[to] = balance;
+      sup.balance = balance;
     }
   }  
 
@@ -181,7 +208,7 @@ contract LimitedTokenCrowdSale {
   * @return An uint256 representing the amount owned by the passed address.
   */
   function tokenBalanceOf(address _owner) public constant returns (uint256 balance) {
-    return tokenBalance[_owner];
+    return supportersMap[_owner].balance;
   }
 
   /** 

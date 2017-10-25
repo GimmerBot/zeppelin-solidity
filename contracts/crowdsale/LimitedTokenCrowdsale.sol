@@ -61,7 +61,10 @@ contract LimitedTokenCrowdSale {
     * @param value weis paid for purchase
     * @param amount amount of tokens purchased
     */
-    event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
+    event TokenPurchase(address indexed purchaser, uint256 value, uint256 amount);
+
+    event KYCPending(address indexed purchaser, uint256 value, uint256 amount);
+    
 
   function LimitedTokenCrowdSale(uint256 _rate, uint256 _saleStartDate, 
                                   address _tokenAddress, uint256 _minTokenTransaction, 
@@ -124,6 +127,8 @@ contract LimitedTokenCrowdSale {
       // money is frozen as user has no KYC
       weiFrozen = weiFrozen.add(weiAmount); 
       sup.frozen = sup.frozen.add(weiAmount);
+
+      KYCPending(sender, weiAmount, tokens);
     }
     sup.balance = sup.balance.add(tokens);
     sup.bought = totalBought;
@@ -138,7 +143,7 @@ contract LimitedTokenCrowdSale {
     tokensToWithdraw = tokensToWithdraw.add(tokens);
 
     // send an event for a Token Purchase
-    TokenPurchase(sender, sender, weiAmount, tokens);
+    TokenPurchase(sender, weiAmount, tokens);
   }
 
   function approveUserKYC(address user) public {
@@ -179,14 +184,13 @@ contract LimitedTokenCrowdSale {
 
     // add to the balance of the user, to be paid later
     Supporter storage sup = supportersMap[sender];
-    uint256 totalBought = sup.bought.add(tokens);
-    if (!sup.hasKYC && totalBought > saleLimitWithoutKYC) {
+    if (!sup.hasKYC && tokens > saleLimitWithoutKYC) {
       revert(); // no KYC at after sale = no tokens
     }   
 
     // add to the balance of the user, to be paid later
     if (token.transfer(sender, tokens)) {
-      sup.bought = totalBought;
+      sup.bought = sup.bought.add(tokens);
 
       // update how much Wei we have raised
       weiRaised = weiAmount.add(weiRaised);
@@ -198,7 +202,7 @@ contract LimitedTokenCrowdSale {
       tokensToWithdraw = tokensToWithdraw.add(tokens);
 
       // send an event for a Token Purchase
-      TokenPurchase(sender, sender, weiAmount, tokens);
+      TokenPurchase(sender, weiAmount, tokens);
     }
   }
 

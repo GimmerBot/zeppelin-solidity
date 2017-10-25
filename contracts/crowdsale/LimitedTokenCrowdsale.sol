@@ -20,6 +20,7 @@ contract LimitedTokenCrowdSale {
     struct Supporter {
         uint256 balance;
         uint256 bought;
+        uint256 frozen;
         bool hasKYC;
     }
 
@@ -34,6 +35,9 @@ contract LimitedTokenCrowdSale {
 
     // amount of raised money in wei
     uint256 public weiRaised;
+
+    // amount of frozen raised money in wei
+    uint256 public weiFrozen;
 
     // amount of total tokens sold
     uint256 public tokensSold;
@@ -117,7 +121,9 @@ contract LimitedTokenCrowdSale {
     Supporter storage sup = supportersMap[sender];
     uint256 totalBought = sup.bought.add(tokens);
     if (!sup.hasKYC && totalBought > saleLimitWithoutKYC) {
-      revert();
+      // money is frozen as user has no KYC
+      weiFrozen = weiFrozen.add(weiAmount); 
+      sup.frozen = sup.frozen.add(weiAmount);
     }
     sup.balance = sup.balance.add(tokens);
     sup.bought = totalBought;
@@ -135,8 +141,19 @@ contract LimitedTokenCrowdSale {
     TokenPurchase(sender, sender, weiAmount, tokens);
   }
 
-  function changeUserKYC(address user, bool value) public {
-    supportersMap[user].hasKYC = value;
+  function approveUserKYC(address user) public {
+    Supporter storage sup = supportersMap[user];
+    weiFrozen = weiFrozen.sub(sup.frozen);
+    sup.frozen = 0;
+    sup.hasKYC = true;
+  }
+
+  function userHasKYC(address user) public constant returns (bool) {
+    return supportersMap[user].hasKYC;
+  }
+
+  function userTotalBought(address user) public constant returns (uint256) {
+    return supportersMap[user].bought;
   }
 
   // Buys tokens and sends them directly to the end user
@@ -164,7 +181,7 @@ contract LimitedTokenCrowdSale {
     Supporter storage sup = supportersMap[sender];
     uint256 totalBought = sup.bought.add(tokens);
     if (!sup.hasKYC && totalBought > saleLimitWithoutKYC) {
-      revert();
+      revert(); // no KYC at after sale = no tokens
     }   
 
     // add to the balance of the user, to be paid later
@@ -185,12 +202,22 @@ contract LimitedTokenCrowdSale {
     }
   }
 
+  /**
+  * @dev Gets the balance of the specified address.
+  * @param _owner The address to query the the balance of.
+  * @return An uint256 representing the amount owned by the passed address.
+  */
+  function tokenBalanceOf(address _owner) public constant returns (uint256 balance) {
+    return supportersMap[_owner].balance;
+  }
+
   // Withdraws the tokens that the sender owns
   function withdrawTokens() public {
     address to = msg.sender;
     Supporter storage sup = supportersMap[to];
     uint256 balance = sup.balance;
     require(balance > 0);
+    require(sup.frozen == 0);
 
     sup.balance = 0;
     if (token.transfer(to, balance)) {
@@ -202,15 +229,6 @@ contract LimitedTokenCrowdSale {
     }
   }  
 
-  /**
-  * @dev Gets the balance of the specified address.
-  * @param _owner The address to query the the balance of.
-  * @return An uint256 representing the amount owned by the passed address.
-  */
-  function tokenBalanceOf(address _owner) public constant returns (uint256 balance) {
-    return supportersMap[_owner].balance;
-  }
-
   /** 
   * @dev Send all the funds currently in the wallet to 
   * the organization wallet provided at the contract creation
@@ -219,6 +237,11 @@ contract LimitedTokenCrowdSale {
   */
   function withdrawFunds() public {
     require(this.balance > 0);
-    wallet.transfer(this.balance);
+
+    // only withdraw money that is not frozen
+    uint256 available = this.balance.sub(weiFrozen);
+    require(available > 0);
+
+    wallet.transfer(available);
   }
 }

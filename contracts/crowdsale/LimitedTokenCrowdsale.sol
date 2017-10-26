@@ -57,7 +57,6 @@ contract LimitedTokenCrowdSale {
     /**
     * event for token purchase logging
     * @param purchaser who paid for the tokens
-    * @param beneficiary who got the tokens
     * @param value weis paid for purchase
     * @param amount amount of tokens purchased
     */
@@ -82,6 +81,10 @@ contract LimitedTokenCrowdSale {
       minTokenTransaction = _minTokenTransaction;
       saleLimitWithoutKYC = _saleLimitWithoutKYC;
       wallet = _wallet;
+  }
+
+  function updateSaleLimitWithoutKYC(uint256 _saleLimitWithoutKYC) public {
+    saleLimitWithoutKYC = _saleLimitWithoutKYC;
   }
 
   // Receive ETH

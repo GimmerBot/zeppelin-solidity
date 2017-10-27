@@ -60,7 +60,7 @@ contract LimitedTokenCrowdSale {
     * @param value weis paid for purchase
     * @param amount amount of tokens purchased
     */
-    event TokenPurchase(address indexed purchaser, uint256 value, uint256 amount);
+    event TokenPurchase(address indexed purchaser, uint256 value, uint256 amount, uint256 price);
 
     event KYCPending(address indexed purchaser, uint256 value, uint256 amount);
     
@@ -146,7 +146,7 @@ contract LimitedTokenCrowdSale {
     tokensToWithdraw = tokensToWithdraw.add(tokens);
 
     // send an event for a Token Purchase
-    TokenPurchase(sender, weiAmount, tokens);
+    TokenPurchase(sender, weiAmount, tokens, price);
   }
 
   function approveUserKYC(address user) public {
@@ -205,7 +205,7 @@ contract LimitedTokenCrowdSale {
       tokensToWithdraw = tokensToWithdraw.add(tokens);
 
       // send an event for a Token Purchase
-      TokenPurchase(sender, weiAmount, tokens);
+      TokenPurchase(sender, weiAmount, tokens, price);
     }
   }
 

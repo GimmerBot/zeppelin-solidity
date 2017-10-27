@@ -67,7 +67,7 @@ contract LimitedTokenCrowdSale {
 
   function LimitedTokenCrowdSale(uint256 _rate, uint256 _saleStartDate, 
                                   address _tokenAddress, uint256 _minTokenTransaction, 
-                                  uint256 _saleLimitWithoutKYC, address _wallet) {
+                                  uint256 _saleLimitWithoutKYC, address _wallet) public {
       require(_rate > 0);
       require(_saleStartDate != 0);
       require(_tokenAddress != 0);

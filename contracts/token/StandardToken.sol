@@ -1,9 +1,7 @@
 pragma solidity ^0.4.11;
 
-
 import './BasicToken.sol';
 import './ERC20.sol';
-
 
 /**
  * @title Standard ERC20 token
@@ -83,5 +81,4 @@ contract StandardToken is ERC20, BasicToken {
     Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
     return true;
   }
-
 }

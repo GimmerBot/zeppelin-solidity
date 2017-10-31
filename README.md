@@ -1,4 +1,16 @@
-# Zeppelin Solidity
+# Gimmer Fork of Zeppelin Solidity
+
+## Changes
+SafeMath: On Solidity 0.4.17 we are able to use the pure modifier instead of constant, because we are neither reading nor modifying the contract state.
+Ownable: Added explicit public to constructor
+
+## New
+LimitedTokenCrowdSale: All of Zeppelin crowdsales models use Mintable Tokens, which does not fit the pattern that Gimmer Token is going to use - which is a fixed cap token, where nobody can mint new tokens after initial distribution. There came the need for a LimitedTokenCrowdsale, which basically acts as a pre-sale exchange: you stablish a price, users can buy the token and stay logged for later withdrawal.
+LimitedTokenDirectCrowdsale: Inherits from LimitedTokenCrowdSale, but implements functions for direct acquisition of tokens (no withdrawal patterns, so users that send Wei to the contract will receive tokens directly - this is useful for contracts that morph from crowdsales into direct-sale)
+
+Started writing initial unit tests for LimitedTokenCrowdSale
+
+## Original Readme
 [![NPM Package](https://img.shields.io/npm/v/zeppelin-solidity.svg?style=flat-square)](https://www.npmjs.org/package/zeppelin-solidity)
 [![Build Status](https://img.shields.io/travis/OpenZeppelin/zeppelin-solidity.svg?branch=master&style=flat-square)](https://travis-ci.org/OpenZeppelin/zeppelin-solidity)
 [![Coverage Status](https://coveralls.io/repos/github/OpenZeppelin/zeppelin-solidity/badge.svg?branch=master)](https://coveralls.io/github/OpenZeppelin/zeppelin-solidity?branch=master)

@@ -118,7 +118,7 @@ contract LimitedTokenCrowdSale {
     }
 
     /**
-    * @dev Approves an User's KYC, unfreezing any wei/tokens
+    * @dev Approves an User's KYC, unfreezing any Wei/Tokens
     * to be withdrawn
     */
     function internalApproveUserKYC(address user) internal {
@@ -145,8 +145,8 @@ contract LimitedTokenCrowdSale {
     * @dev Saves how much the user bought in tokens for later withdrawal
     */
     function internalBuyToken(uint256 weiAmount, address sender) internal {
-        require(sender != 0x0);
         require(weiAmount != 0);
+        require(sender != address(0));
 
         // give a chance to an inheriting contract to have
         // its own options for token pricing
@@ -154,7 +154,7 @@ contract LimitedTokenCrowdSale {
 
         // calculate token amount to be given to user
         // (Solidity always truncates on division)
-        uint256 tokens = weiAmount / price;
+        uint256 tokens = weiAmount.div(price);
 
         // must have more tokens than min transaction..
         require(tokens > minTokenTransaction);
@@ -167,7 +167,7 @@ contract LimitedTokenCrowdSale {
         if (!sup.hasKYC && totalBought > weiSaleLimitWithoutKYC) {
             // money is frozen as user has no KYC,
             // and bought in total more than is allowed
-            weiFrozen = weiFrozen.add(weiAmount); 
+            weiFrozen = weiFrozen.add(weiAmount);
             sup.weiFrozen = sup.weiFrozen.add(weiAmount);
 
             KYCPending(sender, weiAmount, tokens);

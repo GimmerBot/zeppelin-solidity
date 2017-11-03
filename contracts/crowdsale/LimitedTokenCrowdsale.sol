@@ -139,7 +139,7 @@ contract LimitedTokenCrowdSale {
     /**
     * @dev Override to return the token priced used 
     */
-    function getTokenPrice() public constant returns (uint256);
+    function internalGetTokenPrice() internal constant returns (uint256);
 
     /**
     * @dev Saves how much the user bought in tokens for later withdrawal
@@ -150,7 +150,7 @@ contract LimitedTokenCrowdSale {
 
         // give a chance to an inheriting contract to have
         // its own options for token pricing
-        uint256 price = getTokenPrice();
+        uint256 price = internalGetTokenPrice();
 
         // calculate token amount to be given to user
         // (Solidity always truncates on division)
